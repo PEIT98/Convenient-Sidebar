@@ -1,0 +1,42 @@
+name: Publish Convenient Sidebar v1.0.1
+
+on:
+  push:
+    branches:
+      - release-v1.0.1
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Validate and package extension
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m json.tool extension/manifest.json > /dev/null
+          for script in extension/js/*.js; do node --check "$script"; done
+          cd extension
+          zip -q -r ../Convenient-Sidebar-v1.0.1.zip .
+          cd ..
+          unzip -tq Convenient-Sidebar-v1.0.1.zip
+          sha256sum Convenient-Sidebar-v1.0.1.zip > Convenient-Sidebar-v1.0.1.zip.sha256
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release create v1.0.1 \
+            Convenient-Sidebar-v1.0.1.zip \
+            Convenient-Sidebar-v1.0.1.zip.sha256 \
+            --repo "$GITHUB_REPOSITORY" \
+            --target ee8e5f72e5032fa7a2175e7e65ff2b9f686f3ad1 \
+            --title 'Convenient Sidebar v1.0.1' \
+            --notes '下载 ZIP 并解压，在 Edge/Chrome 扩展管理页选择包含 manifest.json 的解压目录加载。修复 Edge 工具栏图标设置失败；包括快捷方式管理和悬浮图标栏。'
